@@ -22,8 +22,8 @@ colo_to_chinese = {
 # CSV 文件路径
 csv_file = 'results.csv'
 
-# 代理检查 API 地址
-checkip_urls = ["https://check.proxyip.cmliussss.net/check?proxyip={ip}"]
+# 代理检查 API 基础地址（仅域名和路径）
+checkip_urls = ["https://check.proxyip.cmliussss.net"]
 
 # 国家名称规范化映射
 country_mapping = {
@@ -58,8 +58,9 @@ async def is_cloudflare(ip, domain, session):
         return False
 
 async def get_ip_location(ip, session):
-    """异步查询 IP 的地理位置（中文），规范化中国地区表示"""
+    """异步查询 IP 的地理位置（中文），使用 HTTP 禁用 HTTP/2"""
     try:
+        # 使用 HTTP 避免 HTTP/2 请求错误
         async with session.get(f'http://ip-api.com/json/{ip}?lang=zh-CN', timeout=5) as response:
             if response.status == 200:
                 data = await response.json()
@@ -102,7 +103,8 @@ async def test_proxy_ip(ip, session):
     """异步测试 IP 是否可用作代理"""
     for url in checkip_urls:
         try:
-            async with session.get(url.format(ip=ip), timeout=5) as response:
+            # 动态拼接 /check?proxyip={ip}
+            async with session.get(f"{url}/check?proxyip={ip}", timeout=5) as response:
                 if response.status == 200:
                     data = await response.json()
                     return {
@@ -110,7 +112,7 @@ async def test_proxy_ip(ip, session):
                         'port': data.get('portRemote', -1)
                     }
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            print(f'测试 {url} 代理失败: {e}')
+            print(f'测试 {url}/check?proxyip={ip} 代理失败: {e}')
             continue
     return {'success': False, 'port': -1}
 
@@ -187,7 +189,7 @@ async def test_ip(ip, session, semaphore, loop):
         try:
             bind_ip(domain, 443, ip)
             async with session.get(
-                f'https://{domain}/',#这里可以添加一个目录或者图片地址，例如https://{domain}/?api=http://123.com/1.png
+                f'https://{domain}/?imageUrl=https://mwfimsvfast2.cc/static/upload2/book/id/306670/30706440/c69859bfebb9415b5e6037dfcbf394df.webp?v=20220724',
                 timeout=5, ssl=False
             ) as response:
                 if response.status == 200:
@@ -225,15 +227,16 @@ async def test_ip(ip, session, semaphore, loop):
             await asyncio.sleep(1.5)
 
 async def main():
-    """主函数，分批处理 IP"""
+    """主函数，分批处理 IP，并按代理可用性分组输出"""
     if domain == 'your-domain.com':
         print('错误: 请将脚本中的 domain 变量替换为您的 Cloudflare 域名（启用橙云代理）')
         exit(1)
     good_ips = []
     semaphore = asyncio.Semaphore(2)
-    timeout = aiohttp.ClientTimeout(total=10)
-    batch_size = 10
-    async with aiohttp.ClientSession(timeout=timeout) as session:
+    timeout = aiohttp.ClientTimeout(total=10, connect=5, sock_connect=5)
+    batch_size = 10  # 定义批次大小
+    # 配置 ClientSession 优先使用 HTTP/2（除 ip-api 外）
+    async with aiohttp.ClientSession(timeout=timeout, connector=aiohttp.TCPConnector(ssl=False)) as session:
         loop = asyncio.get_running_loop()
         for i in range(0, len(ips), batch_size):
             batch_ips = ips[i:i + batch_size]
@@ -246,11 +249,28 @@ async def main():
                 print(f'批次 {i//batch_size + 1} 完成，等待 10 秒...')
                 await asyncio.sleep(10)
     if good_ips:
-        sorted_ips = sorted(good_ips, key=lambda r: float(r['延迟(ms)']) if r['延迟(ms)'] != '测试失败' else float('inf'))
-        print('\n可用的 IP 列表（按延迟从低到高排序）：')
-        for record in sorted_ips:
-            print(f'IP: {record["IP"]}, 地理位置: {record["国家"]}, {record["地区"]}, {record["城市"]}, 机房: {record["机房"]}, 延迟: {record["延迟(ms)"]}, 代理可用: {record["代理可用"]}, 代理端口: {record["代理端口"]}, 时间戳: {record["时间戳"]}')
-        save_to_csv(sorted_ips)
+        # 按代理可用性分组
+        proxy_available = [r for r in good_ips if r['代理可用'] == '是']
+        proxy_unavailable = [r for r in good_ips if r['代理可用'] == '否']
+        # 按延迟排序
+        sorted_available = sorted(proxy_available, key=lambda r: float(r['延迟(ms)']) if r['延迟(ms)'] != '测试失败' else float('inf'))
+        sorted_unavailable = sorted(proxy_unavailable, key=lambda r: float(r['延迟(ms)']) if r['延迟(ms)'] != '测试失败' else float('inf'))
+        # 打印代理可用 IP
+        print('\n代理可用的 IP 列表（按延迟从低到高排序）：')
+        if sorted_available:
+            for record in sorted_available:
+                print(f'IP: {record["IP"]}, 地理位置: {record["国家"]}, {record["地区"]}, {record["城市"]}, 机房: {record["机房"]}, 延迟: {record["延迟(ms)"]}, 代理可用: {record["代理可用"]}, 代理端口: {record["代理端口"]}, 时间戳: {record["时间戳"]}')
+        else:
+            print('无代理可用的 IP')
+        # 打印代理不可用 IP
+        print('\n代理不可用的 IP 列表（按延迟从低到高排序）：')
+        if sorted_unavailable:
+            for record in sorted_unavailable:
+                print(f'IP: {record["IP"]}, 地理位置: {record["国家"]}, {record["地区"]}, {record["城市"]}, 机房: {record["机房"]}, 延迟: {record["延迟(ms)"]}, 代理可用: {record["代理可用"]}, 代理端口: {record["代理端口"]}, 时间戳: {record["时间戳"]}')
+        else:
+            print('无代理不可用的 IP')
+        # 保存所有结果到 CSV
+        save_to_csv(good_ips)
     else:
         print('\n无可用 IP')
 
