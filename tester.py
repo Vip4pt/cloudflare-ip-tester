@@ -189,7 +189,7 @@ async def test_ip(ip, session, semaphore, loop):
         try:
             bind_ip(domain, 443, ip)
             async with session.get(
-                f'https://{domain}/?imageUrl=https://mwfimsvfast2.cc/static/upload2/book/id/306670/30706440/c69859bfebb9415b5e6037dfcbf394df.webp?v=20220724',
+                f'https://{domain}/',#可以设置成自己的页面，比如：https://doamin.com/1.jpg
                 timeout=5, ssl=False
             ) as response:
                 if response.status == 200:
