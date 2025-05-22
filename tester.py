@@ -25,6 +25,17 @@ csv_file = 'results.csv'
 # 代理检查 API 地址
 checkip_urls = ["https://check.proxyip.cmliussss.net/check?proxyip={ip}"]
 
+# 国家名称规范化映射
+country_mapping = {
+    '香港': '中国（香港）',
+    '香港特别行政区': '中国（香港）',
+    '台湾': '中国（台湾）',
+    '中華民國': '中国（台湾）',
+    '澳门': '中国（澳门）',
+    '澳門': '中国（澳门）',
+    '澳门特别行政区': '中国（澳门）'
+}
+
 async def is_cloudflare(ip, domain, session):
     """异步检测 IP 是否运行 Cloudflare 服务"""
     try:
@@ -47,14 +58,17 @@ async def is_cloudflare(ip, domain, session):
         return False
 
 async def get_ip_location(ip, session):
-    """异步查询 IP 的地理位置（中文）"""
+    """异步查询 IP 的地理位置（中文），规范化中国地区表示"""
     try:
         async with session.get(f'http://ip-api.com/json/{ip}?lang=zh-CN', timeout=5) as response:
             if response.status == 200:
                 data = await response.json()
                 if data.get('status') == 'success':
+                    # 规范化国家字段
+                    country = data.get('country', '未知')
+                    country = country_mapping.get(country, country)
                     return {
-                        'country': data.get('country', '未知'),
+                        'country': country,
                         'region': data.get('regionName', '未知'),
                         'city': data.get('city', '未知')
                     }
