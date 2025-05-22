@@ -37,7 +37,8 @@
 
 ```bash
 pip install aiohttp ping3
-``````
+```
+```
 
 ## 使用方法
 
@@ -115,16 +116,16 @@ cloudflare-ip-tester/
     curl -s -k https://your-domain.com/cdn-cgi/trace
     ```
 * ​**IP.txt**​：
-  * 每行一个 IP，避免非 Cloudflare IP（如 `27.36.125.6`，中国电信）。
-  * 
+  * 每行一个 IP
+  
 * ​**代理测试 API**​：
   * 默认 API 可能不稳定，建议部署自定义 API。
-  * 
+  
 * ​**速率控制**​：
   * 并发：2 个请求。
   * 地理位置请求间隔：2 秒。
   * 批次间隔：每 10 IP 等待 10 秒。
-  * 
+  
 * ​**机房列表**​：
   * `colo_to_chinese` 映射数据中心代码到中文。
   * 更新：参考 [Cloudflare 网络](https://www.cloudflare.com/network/).
@@ -181,4 +182,3 @@ cloudflare-ip-tester/
 ---
 
 *最后更新：2025 年 5 月 22 日*
-
