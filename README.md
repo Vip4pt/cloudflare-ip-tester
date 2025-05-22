@@ -154,16 +154,30 @@ cloudflare-ip-tester/
    * 原因：新数据中心未在 `colo_to_chinese` 中。
    * 解决：查 [Cloudflare 网络](https://www.cloudflare.com/network/)，更新映射。
 
-## 贡献
+## 关于ip的查找方式
+ ​**通过fofa.info**​：
+```bash
+剔除CF：asn!="13335" && asn!="209242"
+阿里云：server=="cloudflare" && asn=="45102"
+甲骨文韩国：server=="cloudflare" && asn=="31898" && country=="KR"
+```
+​**一些语句的组合**​：
+```bash
+端口：port=="443"
+剔除域名搜索：is_domain=false
+国家：country=="CN"
+asn：asn=="13335"
+服务：server=="cloudflare"
+响应头：header="Forbidden"
 
-欢迎提交 Pull Request 或报告问题：
+语句的不同之处
+asn!= 是剔除
+asn= 是包含
+多个语句之间使用&&隔开
 
-1. Fork 仓库。
-2. 创建分支：`git checkout -b feature/your-feature`。
-3. 提交更改：`git commit -m "Add your feature"`。
-4. 推送：`git push origin feature/your-feature`。
-5. 提交 Pull Request。
-
+例如我要搜索国内的反代IP：
+server=="cloudflare" && port=="443" && header="Forbidden" && country=="CN" && is_domain=false
+```
 
 
 ## 致谢
