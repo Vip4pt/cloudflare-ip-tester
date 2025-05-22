@@ -38,7 +38,6 @@
 ```bash
 pip install aiohttp ping3
 ```
-```
 
 ## 使用方法
 
